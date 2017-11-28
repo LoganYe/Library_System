@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+<!-- form to input card_no-->
   <form name="input" action="/fine/" method="get">
     <input type="radio" name="fine_mode" value="search" style="visibility:hidden;" checked/>
     <b>Search fine:</b><br/>
@@ -15,9 +16,12 @@
     <br/>
     <input type="submit" value="pay"/>
     <br/>
+	<!--for every item in list of the form {card_no:A,loan_id:B,est_amt:C}-->	
     {% for fine in book_datas %}
+    <div>	
     <input type="radio" name="loan_id" value="{{fine.loan_id}}"/>
     card no: <b>{{fine.card_no}}</b> est amt: <b>{{fine.est_amt}}</b></p>
+    </div>
     <br/>
     {% endfor %}
   </form>
