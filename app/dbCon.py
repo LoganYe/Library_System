@@ -15,7 +15,7 @@ db2 = mysql.connect(user="root", passwd="a5iQb0eK", db="Library", charset="utf8"
 db2.autocommit(True)
 c2 = db2.cursor()
 
-
+#search functionality
 def search_BOOK(args):
 	search_method = args.get('search')
 	# search by book id
@@ -82,7 +82,7 @@ def search_BOOK(args):
 		# print '\r\nno args\r\n'
 		return []
 
-
+#checkout functionality
 def check_out_BOOK(args):
 	book_id = args.get('book_id')
 	branch_id = args.get('branch_id')
@@ -154,6 +154,7 @@ def check_out_BOOK(args):
 		retStr = "Error: wrong input(input box should not leave blank)"
 		return retStr,[]
 
+#check in functionality
 
 def check_in_BOOK(args):
 	check_in_mode = args.get('check_in_mode')
@@ -301,14 +302,18 @@ def fine(args):
 			c.execute(sql)
 			res = []
 			for i in c.fetchall():
-				res.append({'card_id':i[0], 'loan_id':i[1], 'est_amt':i[2]})
-
+				res.append({'card_no':i[0], 'loan_id':i[1], 'est_amt':i[2]})
+				
 			retStr = ""
+			if not res:	#no dues found for card_no
+				retStr="no Dues for card number %s!!!" % card_no
+
 			return retStr,res
 			# sql2 = "SELECT (Card_no, Loan_id, Fine_amt) FROM BOOK_LOANS, FINE WHERE BOOK_LOANS.Loan_id = FINE.Loan_id and Paid_attr = 1 and Card_no = %d and Loan_id = %d and Fine_amt = %f GROUP BY Card_no;" % (Card_no, Loan_id, Fine_amt)
 			# c.execute(sql2)
 			# resStr2 = c.fetchall()
 			# return retStr2,[]
+		
 
 	# pay
 	if 'pay' == fine_mode:
