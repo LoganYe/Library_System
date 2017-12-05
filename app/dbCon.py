@@ -7,13 +7,17 @@ import time
 import MySQLdb as mysql
 # import json
 
-db = mysql.connect(user="root", passwd="a5iQb0eK", db="Library", charset="utf8")
+db = mysql.connect(user="root", passwd="yellow", db="Library", charset="utf8")
 db.autocommit(True)
 c = db.cursor()
 
-db2 = mysql.connect(user="root", passwd="a5iQb0eK", db="Library", charset="utf8")
+db2 = mysql.connect(user="root", passwd="yellow", db="Library", charset="utf8")
 db2.autocommit(True)
 c2 = db2.cursor()
+
+db3 = mysql.connect(user="root", passwd="yellow", db="Library", charset="utf8")
+db3.autocommit(True)
+c3 = db3.cursor()
 
 #search functionality
 def search_BOOK(args):
@@ -82,12 +86,23 @@ def search_BOOK(args):
 	res = []
 
 	for i in c.fetchall():
+		#record branch_info for every book
+		branch_info=[]
+
 		sql = "SELECT Branch_id, No_of_copies \
 		FROM BOOK_COPIES WHERE Book_id = '%s' and No_of_copies > 0 \
 		ORDER BY Branch_id;" % i[0]
 		c2.execute(sql)
 
-		branch_info = [{'branch_id':j[0], 'no_of_copies':j[1]} for j in c2.fetchall()]
+		for j in c2.fetchall() :
+			sql = "SELECT count(L.Card_no) from BOOK_LOANS L \
+			where L.Book_id = '%s' and L.Branch_id = %d\
+			and L.Date_in IS NULL;" % (i[0] , int(j[0]))
+			c3.execute(sql)
+
+			out = c3.fetchone()[0]
+
+			branch_info.append({'branch_id':j[0], 'total_copies':j[1], 'available_copies' :j[1]-out})
 
 		res.append({'book_id':i[0], 'title':i[1], 'author':i[2], 'branch':branch_info})
 
