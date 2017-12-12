@@ -7,80 +7,107 @@ import time
 import MySQLdb as mysql
 # import json
 
-db = mysql.connect(user="root", passwd="a5iQb0eK", db="Library", charset="utf8")
+db = mysql.connect(user="root", passwd="yellow", db="Library", charset="utf8")
 db.autocommit(True)
 c = db.cursor()
 
-db2 = mysql.connect(user="root", passwd="a5iQb0eK", db="Library", charset="utf8")
+db2 = mysql.connect(user="root", passwd="yellow", db="Library", charset="utf8")
 db2.autocommit(True)
 c2 = db2.cursor()
+
+db3 = mysql.connect(user="root", passwd="yellow", db="Library", charset="utf8")
+db3.autocommit(True)
+c3 = db3.cursor()
 
 #search functionality
 def search_BOOK(args):
 	search_method = args.get('search')
+
 	# search by book id
 	if 'book_id' == search_method:
 		# print '\r\nbook id\r\n'
+
 		if '' == args.get('book_id'):
 			return []
-		sql = "SELECT BOOK.Book_id, BOOK.Title, BOOK_AUTHORS.Author_name FROM BOOK_AUTHORS INNER JOIN BOOK ON BOOK_AUTHORS.Book_id \
-		= '%s' and BOOK.Book_id = BOOK_AUTHORS.Book_id ORDER BY BOOK_AUTHORS.Book_id;" % args.get('book_id')
+
+		sql = "SELECT BOOK.Book_id, BOOK.Title, BOOK_AUTHORS.Author_name \
+		FROM BOOK_AUTHORS INNER JOIN BOOK ON BOOK_AUTHORS.Book_id = '%s' \
+		and BOOK.Book_id = BOOK_AUTHORS.Book_id \
+		ORDER BY BOOK_AUTHORS.Book_id;" % args.get('book_id')
+
 		c.execute(sql)
-		res = []
-		for i in c.fetchall():
-			sql = "SELECT Branch_id, No_of_copies FROM BOOK_COPIES WHERE Book_id = '%s' and No_of_copies > 0 ORDER BY Branch_id;" % i[0]
-			c2.execute(sql)
-			branch_info = [{'branch_id':j[0], 'no_of_copies':j[1]} for j in c2.fetchall()]
-			res.append({'book_id':i[0], 'title':i[1], 'author':i[2], 'branch':branch_info})
-
-		# print res
-		return res
-
-
+	
 
 	# search by title
 	elif 'title' == search_method:
 		# print '\r\ntitle\r\n'
+
 		if '' == args.get('title'):
 			return []
-		sql = "SELECT BOOK.Book_id, BOOK.Title, BOOK_AUTHORS.Author_name FROM BOOK INNER JOIN BOOK_AUTHORS ON BOOK.Title LIKE '%%%s%%' \
+
+		sql = "SELECT BOOK.Book_id, BOOK.Title, BOOK_AUTHORS.Author_name \
+		FROM BOOK INNER JOIN BOOK_AUTHORS ON BOOK.Title LIKE '%%%s%%' \
 		and BOOK.Book_id = BOOK_AUTHORS.Book_id ORDER BY BOOK.Book_id;" % args.get('title')
+
 		c.execute(sql)
-		res = []
-		for i in c.fetchall():
-			sql = "SELECT Branch_id, No_of_copies FROM BOOK_COPIES WHERE Book_id = '%s' and No_of_copies > 0 ORDER BY Branch_id;" % i[0]
-			c2.execute(sql)
-			branch_info = [{'branch_id':j[0], 'no_of_copies':j[1]} for j in c2.fetchall()]
-			res.append({'book_id':i[0], 'title':i[1], 'author':i[2], 'branch':branch_info})
-		return res
+		
 
 	# search by authors
 	elif 'author' == search_method:
 		# print '\r\nauthor\r\n'
+
 		if '' == args.get('author'):
 			return []
+
 		authors = args.get('author').split(' ')
 		gen_str = ''
 		cnt = 0
+
 		for author_str in authors:
 			if 0 == cnt:
 				gen_str = "BOOK_AUTHORS.Author_name LIKE '%%%s%%'" % author_str
 			else:
 				gen_str += " and BOOK_AUTHORS.Author_name LIKE '%%%s%%'" % author_str
 			cnt += 1
-		sql = "SELECT BOOK.Book_id, BOOK.Title, BOOK_AUTHORS.Author_name FROM BOOK_AUTHORS INNER JOIN BOOK ON %s and BOOK.Book_id \
+
+		sql = "SELECT BOOK.Book_id, BOOK.Title, BOOK_AUTHORS.Author_name \
+		FROM BOOK_AUTHORS INNER JOIN BOOK ON %s and BOOK.Book_id \
 		= BOOK_AUTHORS.Book_id ORDER BY BOOK_AUTHORS.Book_id;" % gen_str
 		c.execute(sql)
-		res = []
-		for i in c.fetchall():
-			sql = "SELECT Branch_id, No_of_copies FROM BOOK_COPIES WHERE Book_id = '%s' and No_of_copies > 0 ORDER BY Branch_id;" % i[0]
-			c2.execute(sql)
-			branch_info = [{'branch_id':j[0], 'no_of_copies':j[1]} for j in c2.fetchall()]
-			res.append({'book_id':i[0], 'title':i[1], 'author':i[2], 'branch':branch_info})
-		return res
-	else:
+	
+
+	else: 
+		# if search method unknown
 		# print '\r\nno args\r\n'
 		return []
+
+	
+	# append branch info	
+	res = []
+
+	for i in c.fetchall():
+		#record branch_info for every book
+		branch_info=[]
+
+		sql = "SELECT Branch_id, No_of_copies \
+		FROM BOOK_COPIES WHERE Book_id = '%s' and No_of_copies > 0 \
+		ORDER BY Branch_id;" % i[0]
+		c2.execute(sql)
+
+		for j in c2.fetchall() :
+			sql = "SELECT count(L.Card_no) from BOOK_LOANS L \
+			where L.Book_id = '%s' and L.Branch_id = %d\
+			and L.Date_in IS NULL;" % (i[0] , int(j[0]))
+			c3.execute(sql)
+
+			out = c3.fetchone()[0]
+
+			branch_info.append({'branch_id':j[0], 'total_copies':j[1], 'available_copies' :j[1]-out})
+
+		res.append({'book_id':i[0], 'title':i[1], 'author':i[2], 'branch':branch_info})
+
+	# print res
+	return res
 
 #checkout functionality
 def check_out_BOOK(args):
